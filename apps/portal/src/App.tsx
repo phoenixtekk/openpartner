@@ -1316,7 +1316,7 @@ function NavItem({
 function Logo({ size = 26, alt = PLATFORM_NAME }: { size?: number; alt?: string } = {}) {
   return (
     <img
-      src="/logo-mark-green.svg"
+      src="/phoenixtekk-mark.png"
       alt={alt}
       width={size}
       height={size}

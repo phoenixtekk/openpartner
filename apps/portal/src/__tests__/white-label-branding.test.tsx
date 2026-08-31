@@ -82,7 +82,7 @@ describe('white-label portal renders no platform branding', () => {
     // And no platform logo sneaks in via an <img alt>.
     for (const img of Array.from(container.querySelectorAll('img'))) {
       expect(img.getAttribute('alt') ?? '').not.toMatch(/openpartner/i);
-      expect(img.getAttribute('src') ?? '').not.toMatch(/logo-mark-green/);
+      expect(img.getAttribute('src') ?? '').not.toMatch(/phoenixtekk-mark/);
     }
   });
 
@@ -98,7 +98,7 @@ describe('white-label portal renders no platform branding', () => {
     const text = container.textContent ?? '';
     expect(text).not.toMatch(/openpartner/i);
     expect(text).toContain('Acme Partners');
-    expect(container.querySelector('img[src*="logo-mark-green"]')).toBeNull();
+    expect(container.querySelector('img[src*="phoenixtekk-mark"]')).toBeNull();
   });
 });
 

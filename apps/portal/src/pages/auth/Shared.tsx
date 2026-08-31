@@ -62,7 +62,7 @@ export function AuthFrame({
 export function Logo({ size = 26 }: { size?: number } = {}) {
   return (
     <img
-      src="/logo-mark-green.svg"
+      src="/phoenixtekk-mark.png"
       alt={PLATFORM_NAME}
       width={size}
       height={size}
