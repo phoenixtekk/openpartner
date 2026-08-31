@@ -68,6 +68,7 @@ import { PartnerPostbacksPage } from './pages/partner/Postbacks.js';
 import { InstallPage } from './pages/Install.js';
 import { LandingPage } from './pages/Landing.js';
 import { SignupPage } from './pages/Signup.js';
+import { PricingPage } from './pages/Pricing.js';
 import { SigninPage } from './pages/Signin.js';
 import { WorkspacesPage } from './pages/Workspaces.js';
 import { AddBrandPage } from './pages/AddBrand.js';
@@ -150,6 +151,10 @@ export function App() {
         ) : isMultiTenant ? (
           <>
             <Route path="/" element={<LandingPage />} />
+            {/* Phoenixtekk fork: our own pricing surface. Upstream links
+                "Pricing" to openpartner.dev, which prices OpenPartner's
+                hosted service, not ours. See docs/FORK-PATCHES.md #4. */}
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/signin" element={<SigninPage />} />
             <Route path="/workspaces" element={<WorkspacesPage />} />

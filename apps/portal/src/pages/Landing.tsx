@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { theme } from '../theme.js';
 import { Logo } from './auth/Shared.js';
+import { usePublicBrand } from '../lib/useBrand.js';
 
 /**
  * Public landing for the multi-tenant deployment. Voice mirrors the
@@ -17,6 +18,10 @@ import { Logo } from './auth/Shared.js';
 export function LandingPage() {
   const nav = useNavigate();
   const [checking, setChecking] = useState(true);
+  // Phoenixtekk fork: the creator half of this page is a Network surface.
+  // With no Network coordinator configured, /creator/signup leads nowhere
+  // useful, so the card is hidden. See docs/FORK-PATCHES.md #3.
+  const { networkEnabled } = usePublicBrand();
 
   useEffect(() => {
     let cancelled = false;
@@ -60,11 +65,10 @@ export function LandingPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Logo />
-          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em' }}>OpenPartner</div>
+          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em' }}>Phoenixtekk Affiliates</div>
         </div>
         <div style={{ display: 'flex', gap: 18, alignItems: 'center', fontSize: 13 }}>
-          <a href="https://openpartner.dev" style={{ color: theme.textMuted }}>About</a>
-          <a href="https://openpartner.dev/pricing" style={{ color: theme.textMuted }}>Pricing</a>
+          <Link to="/pricing" style={{ color: theme.textMuted }}>Pricing</Link>
           <Link to="/signin" style={{ color: theme.textMuted }}>Sign in</Link>
         </div>
       </header>
@@ -72,42 +76,43 @@ export function LandingPage() {
       <main style={{ flex: 1, padding: '64px 24px 32px' }}>
         <div style={{ maxWidth: 880, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: theme.accent, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 16 }}>
-            Partner program software with a built-in network
+Affiliate program software, self-hosted and yours
           </div>
           <h1 style={{ fontSize: 48, lineHeight: 1.1, margin: 0, letterSpacing: '-0.02em', fontWeight: 700 }}>
-            Launch a partner program.<br />Grow it with the Network.
+Launch an affiliate program.<br />Pay partners automatically.
           </h1>
           <p style={{ marginTop: 24, fontSize: 17, color: theme.textMuted, lineHeight: 1.55, maxWidth: 720, marginInline: 'auto' }}>
-            Brands launch affiliate, referral, and creator programs with visible commission terms and
-            direct Stripe payouts. Creators browse real offers and keep what they earn.
+Track every sale back to the partner who drove it, set flat, percentage, or recurring
+            commissions, and pay partners directly through Stripe. You only pay when your program earns.
           </p>
         </div>
 
-        <div style={{ maxWidth: 1040, margin: '56px auto 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
+        <div style={{ maxWidth: networkEnabled ? 1040 : 560, margin: '56px auto 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
           <AudienceCard
             eyebrow="For brands"
             title="Partner program software for brands that want more than tracking."
             bullets={[
               'Track every conversion back to the partner who drove it',
               'Set flat, percentage, or recurring commission terms',
-              'Recruit creators from the Network when you want more reach',
               'Pay partners directly through Stripe without a middleman cut',
             ]}
-            ctaLabel="Sign up as a brand"
+            ctaLabel="Start free"
             to="/signup"
           />
-          <AudienceCard
-            eyebrow="For creators"
-            title="A creator marketplace with real terms and direct payouts."
-            bullets={[
-              'See commission rates before you apply to any program',
-              'Browse partner offers across affiliate, referral, and creator programs',
-              'Get paid directly by brands through Stripe',
-              'No exclusivity and no platform cut on your earnings',
-            ]}
-            ctaLabel="Sign up as a creator"
-            to="/creator/signup"
-          />
+          {networkEnabled && (
+            <AudienceCard
+              eyebrow="For creators"
+              title="A creator marketplace with real terms and direct payouts."
+              bullets={[
+                'See commission rates before you apply to any program',
+                'Browse partner offers across affiliate, referral, and creator programs',
+                'Get paid directly by brands through Stripe',
+                'No exclusivity and no platform cut on your earnings',
+              ]}
+              ctaLabel="Sign up as a creator"
+              to="/creator/signup"
+            />
+          )}
         </div>
 
         <div style={{ marginTop: 48, textAlign: 'center', color: theme.textDim, fontSize: 13 }}>
@@ -116,7 +121,7 @@ export function LandingPage() {
       </main>
 
       <footer style={{ padding: '20px 32px', borderTop: `1px solid ${theme.borderSubtle}`, color: theme.textDim, fontSize: 12, textAlign: 'center' }}>
-        OpenPartner is open source. <a href="https://openpartner.dev" style={{ color: theme.textMuted }}>Learn more</a>
+Phoenixtekk Affiliates · <Link to="/pricing" style={{ color: theme.textMuted }}>Pricing</Link>
       </footer>
     </div>
   );
