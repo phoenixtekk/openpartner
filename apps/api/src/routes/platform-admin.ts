@@ -384,6 +384,80 @@ platformAdminRouter.post(
 );
 
 // --------------------------------------------------------------------------
+// Phoenixtekk fork: owned-brand entitlement (docs/FORK-PATCHES.md #5)
+// --------------------------------------------------------------------------
+
+/**
+ * Mark a brand as PHOENIXTEKK-OWNED, or hand it back to normal billing.
+ *
+ * Our own products (VelvetSong, Intune Reporting, …) run on the same hub as
+ * paying customers, but must not be billed and must not use the ACH funding
+ * pipeline — it is our own money on both sides of the transaction, so
+ * collecting from ourselves to pay ourselves is pure cost and delay.
+ *
+ * `billingPlan='selfhost'` is what expresses that (planToMode → 'selfhost'):
+ * hasActivePlan() is true and isTrialGateActive() is false, so every 402
+ * paywall is bypassed structurally rather than by an expiry date somebody has
+ * to remember to extend.
+ *
+ * This lives HERE, behind requirePlatformAdminWrite, and NOT on the brand's
+ * own settings or the add-brand form, because 'selfhost' also selects the
+ * UNFUNDED payout rail. A customer who could set it on themselves would be
+ * paying their affiliates out of the Phoenixtekk Stripe balance. Both the
+ * public signup schema and the add-brand schema hardcode
+ * z.enum(['flex','revshare']) for the same reason — keep it that way.
+ *
+ * Granting also provisions white-label and clears the approval gate, because
+ * an owned brand has nothing to review and no reason to carry our branding.
+ */
+const ownedSchema = z.object({ owned: z.boolean() });
+
+platformAdminRouter.post(
+  '/platform-admin/brands/:id/owned',
+  requirePlatformAdmin,
+  requirePlatformAdminWrite,
+  async (req, res) => {
+    const tenant = await loadTenant(req.params.id!);
+    if (!tenant) return res.status(404).json({ error: 'brand_not_found' });
+
+    const body = ownedSchema.safeParse(req.body);
+    if (!body.success) return res.status(400).json({ error: 'invalid_body', detail: body.error.flatten() });
+    const owned = body.data.owned;
+
+    if (owned) {
+      await db<TenantRow>(TABLES.Tenant).where({ id: tenant.id }).update({
+        billingPlan: 'selfhost',
+        whiteLabel: true,
+        approvalStatus: 'approved',
+        updatedAt: new Date(),
+      });
+    } else {
+      // Revoking returns the brand to the unbilled-but-unentitled state a
+      // fresh signup has: billingPlan NULL falls through to OPENPARTNER_MODE
+      // (hosted), so the funding guard applies again and the brand must pick
+      // a plan. We deliberately do NOT invent a plan for them, and we leave
+      // approvalStatus alone — un-approving a live brand would pull its
+      // partner programs down as a side effect of a billing change.
+      await db<TenantRow>(TABLES.Tenant).where({ id: tenant.id }).update({
+        billingPlan: null,
+        whiteLabel: false,
+        updatedAt: new Date(),
+      });
+    }
+
+    await writeAudit(db, {
+      actor: req.platformAdminActor!,
+      action: owned ? 'brand.marked_owned' : 'brand.unmarked_owned',
+      targetType: 'tenant',
+      targetId: tenant.id,
+      detail: { slug: tenant.slug, billingPlan: owned ? 'selfhost' : null, whiteLabel: owned },
+    });
+
+    res.json({ ok: true, owned, billingPlan: owned ? 'selfhost' : null });
+  },
+);
+
+// --------------------------------------------------------------------------
 // Program moderation (per-program takedown; the brand stays live)
 // --------------------------------------------------------------------------
 

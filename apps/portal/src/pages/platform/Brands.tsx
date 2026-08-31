@@ -50,6 +50,17 @@ export function BrandsPage({ operator }: { operator: PlatformOperator }) {
     mutationFn: (id: string) => papi(`/platform-admin/brands/${id}/approve`, { method: 'POST' }),
     onSuccess: invalidate,
   });
+  // Phoenixtekk fork: mark a brand as our own — free, white-labelled, and on
+  // the direct payout rail. Operator-only on purpose; see the API route and
+  // docs/FORK-PATCHES.md #5.
+  const setOwned = useMutation({
+    mutationFn: (v: { id: string; owned: boolean }) =>
+      papi(`/platform-admin/brands/${v.id}/owned`, {
+        method: 'POST',
+        body: JSON.stringify({ owned: v.owned }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-brands'] }),
+  });
   const reinstate = useMutation({
     mutationFn: (id: string) => papi(`/platform-admin/brands/${id}/reinstate`, { method: 'POST' }),
     onSuccess: invalidate,
@@ -68,7 +79,7 @@ export function BrandsPage({ operator }: { operator: PlatformOperator }) {
     onSuccess: invalidate,
   });
 
-  const actionError = approve.error ?? reinstate.error ?? reject.error;
+  const actionError = approve.error ?? reinstate.error ?? reject.error ?? setOwned.error;
   const rows = brands.data?.brands ?? [];
 
   return (
@@ -134,6 +145,8 @@ export function BrandsPage({ operator }: { operator: PlatformOperator }) {
               canWrite={canWrite}
               approveBusy={approve.isPending && approve.variables === b.id}
               reinstateBusy={reinstate.isPending && reinstate.variables === b.id}
+              ownedBusy={setOwned.isPending && setOwned.variables?.id === b.id}
+              onSetOwned={(owned) => setOwned.mutate({ id: b.id, owned })}
               rejectBusy={reject.isPending && reject.variables?.id === b.id}
               onApprove={() => approve.mutate(b.id)}
               onReinstate={() => reinstate.mutate(b.id)}
@@ -211,6 +224,28 @@ function BrandCard({
             {brand.approvalStatus === 'rejected' && (
               <Button size="sm" onClick={onReinstate} disabled={reinstateBusy}>
                 {reinstateBusy ? 'Reinstating…' : 'Reinstate'}
+              </Button>
+            )}
+            {/* Phoenixtekk fork: owned-brand toggle. Grants the selfhost plan
+                (no billing, no trial gate) plus white-label, and clears the
+                approval gate. Operator-only — a brand must never be able to
+                put itself on the unfunded payout rail. */}
+            {brand.billingPlan === 'selfhost' ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onSetOwned(false)}
+                disabled={ownedBusy}
+              >
+                {ownedBusy ? 'Updating…' : 'Unmark owned'}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => onSetOwned(true)}
+                disabled={ownedBusy}
+              >
+                {ownedBusy ? 'Updating…' : 'Mark as owned'}
               </Button>
             )}
           </div>
