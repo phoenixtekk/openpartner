@@ -164,18 +164,22 @@ function BrandCard({
   canWrite,
   approveBusy,
   reinstateBusy,
+  ownedBusy,
   rejectBusy,
   onApprove,
   onReinstate,
+  onSetOwned,
   onReject,
 }: {
   brand: PlatformBrand;
   canWrite: boolean;
   approveBusy: boolean;
   reinstateBusy: boolean;
+  ownedBusy: boolean;
   rejectBusy: boolean;
   onApprove: () => void;
   onReinstate: () => void;
+  onSetOwned: (owned: boolean) => void;
   onReject: (v: Omit<RejectVars, 'id'>, opts?: { onSuccess?: () => void }) => void;
 }) {
   // 'reject' for a pending brand, 'remove' for a retroactive takedown of an
