@@ -27,6 +27,7 @@ import nodemailer from 'nodemailer';
 import { resolveMailConfig } from './mail-settings.js';
 import { resolveBrandName } from './brand-name.js';
 import { getWhiteLabelState } from './white-label.js';
+import { PLATFORM_NAME } from './platform-name.js';
 import { TABLES, type ConfigRow } from '@openpartner/db';
 
 export interface Message {
@@ -87,7 +88,7 @@ class RoutingMailer implements Mailer {
         const wl = await getWhiteLabelState(ctx.db, ctx.tenantId);
         from = wl.effective
           ? `"${safeDisplayName(brandName)}" <${extractAddress(from)}>`
-          : `"${safeDisplayName(brandName)} via OpenPartner" <${extractAddress(from)}>`;
+          : `"${safeDisplayName(brandName)} via ${PLATFORM_NAME}" <${extractAddress(from)}>`;
       }
       const supportRow = await ctx.db<ConfigRow>(TABLES.Config)
         .where({ tenantId: ctx.tenantId, key: 'program_settings' })

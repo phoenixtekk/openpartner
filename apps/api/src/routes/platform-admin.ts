@@ -425,9 +425,14 @@ platformAdminRouter.post(
     const owned = body.data.owned;
 
     if (owned) {
+      // NOTE: deliberately does NOT touch whiteLabel. "Owned" means we do not
+      // bill this brand; white-label means HIDE THE PLATFORM from the brand's
+      // partners. Bundling them was a mistake — it stripped Phoenixtekk
+      // attribution from our own brands' emails and hid the workspace
+      // switcher's brand-management links from the operator. They are
+      // independent capabilities; turn white-label on per brand if wanted.
       await db<TenantRow>(TABLES.Tenant).where({ id: tenant.id }).update({
         billingPlan: 'selfhost',
-        whiteLabel: true,
         approvalStatus: 'approved',
         updatedAt: new Date(),
       });
@@ -440,7 +445,6 @@ platformAdminRouter.post(
       // partner programs down as a side effect of a billing change.
       await db<TenantRow>(TABLES.Tenant).where({ id: tenant.id }).update({
         billingPlan: null,
-        whiteLabel: false,
         updatedAt: new Date(),
       });
     }
@@ -450,7 +454,7 @@ platformAdminRouter.post(
       action: owned ? 'brand.marked_owned' : 'brand.unmarked_owned',
       targetType: 'tenant',
       targetId: tenant.id,
-      detail: { slug: tenant.slug, billingPlan: owned ? 'selfhost' : null, whiteLabel: owned },
+      detail: { slug: tenant.slug, billingPlan: owned ? 'selfhost' : null },
     });
 
     res.json({ ok: true, owned, billingPlan: owned ? 'selfhost' : null });
