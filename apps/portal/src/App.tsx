@@ -403,7 +403,7 @@ function MobileDrawer({ open, onClose, children }: { open: boolean; onClose: () 
 export function Sidebar({ principal, variant = 'sidebar' }: { principal: Principal; variant?: 'sidebar' | 'drawer' }) {
   const nav = useNavigate();
   const tenantBase = useTenantBase();
-  const { programName, supportEmail, logoUrl, whiteLabel, networkEnabled } = useBrand();
+  const { programName, supportEmail, logoUrl, whiteLabel, networkEnabled, owned } = useBrand();
   const isDrawer = variant === 'drawer';
 
   return (
@@ -903,7 +903,12 @@ function IdentitySwitcher({ principal }: { principal: Principal }) {
                 flexDirection: 'column',
               }}
             >
-              {!whiteLabel && (
+              {/* Phoenixtekk fork: `|| owned`. White-label hides these
+                  cross-brand affordances, which is correct for a CUSTOMER's
+                  portal but wrong for a brand we run ourselves — turning
+                  white-label on for our own brand silently removed the only
+                  link to /brands/new. See docs/FORK-PATCHES.md #5. */}
+              {(!whiteLabel || owned) && (
                 <>
                   <a
                     href="/signin?add=1"

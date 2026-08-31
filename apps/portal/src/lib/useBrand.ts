@@ -20,6 +20,8 @@ export interface ProgramSettings {
    *  Creators surface must be hidden when false — otherwise those pages
    *  render a 503 `network_not_configured`. See docs/FORK-PATCHES.md #3. */
   networkEnabled: boolean;
+  /** Phoenixtekk fork: this brand is Phoenixtekk-owned (selfhost plan). */
+  owned: boolean;
 }
 
 /** Platform fallback applied whenever the tenant hasn't set a brand name. */
@@ -40,6 +42,10 @@ export interface Brand {
   /** Phoenixtekk fork: whether a Network coordinator is configured at all.
    *  Gate Network UI on `networkEnabled && !whiteLabel`. */
   networkEnabled: boolean;
+  /** Phoenixtekk fork: a brand we run ourselves. White-label hides the
+   *  platform's cross-brand UI (add account / create brand); an owned brand
+   *  keeps it, because its admin IS the platform operator. */
+  owned: boolean;
   isLoading: boolean;
 }
 
@@ -71,6 +77,7 @@ export function useBrand(): Brand {
     // Default FALSE: if the flag hasn't loaded we hide Network UI rather
     // than flash a tab that will 503.
     networkEnabled: data?.networkEnabled ?? false,
+    owned: data?.owned ?? false,
     isLoading,
   };
 }

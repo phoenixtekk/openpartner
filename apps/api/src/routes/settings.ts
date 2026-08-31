@@ -124,8 +124,17 @@ async function readSettings(db: Knex, tenantId: string): Promise<ProgramSettings
 settingsRouter.get('/config/program', requireAuth, async (req, res) => {
   const { db, tenantId } = tenantOf(req);
   const settings = await readSettings(db, tenantId);
-  // Phoenixtekk fork: tells the SPA whether any Network surface should render.
-  res.json({ ...settings, networkEnabled: platformNetworkUrl() !== null });
+  // Phoenixtekk fork: `owned` marks a Phoenixtekk-run brand (billingPlan
+  // 'selfhost'). White-label hides the platform's cross-brand affordances —
+  // right for a CUSTOMER's white-labelled portal, wrong for ours, where the
+  // admin is the platform operator. The SPA re-enables them when owned.
+  // See docs/FORK-PATCHES.md #5.
+  const ownedRow = await db<TenantRow>(TABLES.Tenant).where({ id: tenantId }).first('billingPlan');
+  res.json({
+    ...settings,
+    networkEnabled: platformNetworkUrl() !== null,
+    owned: ownedRow?.billingPlan === 'selfhost',
+  });
 });
 
 /**
