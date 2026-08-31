@@ -90,6 +90,10 @@ export interface PublicBranding {
   /** Brand approval state for the platform-ops review gate. Null on
    *  single-tenant installs and any deploy that predates the gate. */
   approvalStatus?: 'pending' | 'approved' | 'rejected' | null;
+  /** Phoenixtekk fork: mirrors /config/program. Pre-auth surfaces don't
+   *  render Network UI today, but Brand requires the field, and answering
+   *  it accurately here beats hardcoding false. See docs/FORK-PATCHES.md #3. */
+  networkEnabled?: boolean;
 }
 
 /**
@@ -123,6 +127,7 @@ export function usePublicBrand(): Brand & {
     brandColor: data?.brandColor ?? null,
     tenantSlug: data?.tenantSlug ?? null,
     approvalStatus: data?.approvalStatus ?? null,
+    networkEnabled: data?.networkEnabled ?? false,
     isLoading,
   };
 }

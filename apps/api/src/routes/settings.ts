@@ -149,6 +149,7 @@ settingsRouter.get('/branding', async (req, res) => {
       programTermsUrl: null,
       whiteLabel: false,
       approvalStatus: null,
+      networkEnabled: platformNetworkUrl() !== null,
     });
   }
   const s = await readSettings(req.db, req.tenantId);
@@ -171,6 +172,7 @@ settingsRouter.get('/branding', async (req, res) => {
     programTermsUrl: s.programTermsUrl,
     whiteLabel: s.whiteLabel,
     approvalStatus: tenantRow?.approvalStatus ?? null,
+    networkEnabled: platformNetworkUrl() !== null,
   });
 });
 
