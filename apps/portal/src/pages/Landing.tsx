@@ -28,13 +28,32 @@ export function LandingPage() {
     async function go(home: string) {
       if (!cancelled) nav(home, { replace: true });
     }
+    // Phoenixtekk fork: this page renders NOTHING until both probes settle,
+    // so a slow or failing probe shows the visitor a blank front door. The
+    // creator probe proxies to the Network coordinator, which we do not run —
+    // it 503s, and any upstream latency here is dead time on our most public
+    // page. Cap the whole check and fall through to the marketing splash;
+    // a signed-in visitor just sees the splash briefly before their own
+    // navigation, which is strictly better than a blank screen.
+    // See docs/FORK-PATCHES.md #4.
+    const settleWithin = <T,>(p: Promise<T>, ms: number, fallback: T): Promise<T> =>
+      Promise.race([p, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
+
     Promise.all([
-      fetch('/api/session/home', { credentials: 'include' })
-        .then((r) => (r.ok ? r.json() : { home: null }))
-        .catch(() => ({ home: null })),
-      fetch('/api/creator-api/creators/whoami', { credentials: 'include' })
-        .then((r) => (r.ok ? r.json() : { creator: null }))
-        .catch(() => ({ creator: null })),
+      settleWithin(
+        fetch('/api/session/home', { credentials: 'include' })
+          .then((r) => (r.ok ? r.json() : { home: null }))
+          .catch(() => ({ home: null })),
+        1500,
+        { home: null } as { home?: string | null },
+      ),
+      settleWithin(
+        fetch('/api/creator-api/creators/whoami', { credentials: 'include' })
+          .then((r) => (r.ok ? r.json() : { creator: null }))
+          .catch(() => ({ creator: null })),
+        1500,
+        { creator: null } as { creator: unknown },
+      ),
     ]).then(([brand, creator]: [{ home?: string | null }, { creator: unknown }]) => {
       if (cancelled) return;
       if (brand?.home) return go(brand.home);
