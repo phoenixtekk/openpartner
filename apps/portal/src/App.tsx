@@ -603,7 +603,7 @@ function IdentitySwitcher({ principal }: { principal: Principal }) {
   // about OUR platform's accounts and plans, and their routes only exist
   // on the platform origin (dead links on a custom domain). The chip
   // itself (identity + sign out) stays.
-  const { whiteLabel } = useBrand();
+  const { whiteLabel, owned } = useBrand();
 
   // Best-effort: 401 just means no platform session (admin signed in via
   // api key or pre-platform-sessions session). We still render the chip;

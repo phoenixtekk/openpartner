@@ -102,6 +102,9 @@ export interface PublicBranding {
    *  render Network UI today, but Brand requires the field, and answering
    *  it accurately here beats hardcoding false. See docs/FORK-PATCHES.md #3. */
   networkEnabled?: boolean;
+  /** Phoenixtekk fork: mirrors /config/program. Pre-auth surfaces never render
+   *  the workspace switcher, so false is the correct conservative default. */
+  owned?: boolean;
 }
 
 /**
@@ -136,6 +139,7 @@ export function usePublicBrand(): Brand & {
     tenantSlug: data?.tenantSlug ?? null,
     approvalStatus: data?.approvalStatus ?? null,
     networkEnabled: data?.networkEnabled ?? false,
+    owned: data?.owned ?? false,
     isLoading,
   };
 }
