@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { theme } from '../theme.js';
 import { AuthFrame } from './auth/Shared.js';
+import { usePublicBrand } from '../lib/useBrand.js';
 
 /**
  * Email-only sign-in for the multi-tenant deployment. We don't make the
@@ -11,6 +12,7 @@ import { AuthFrame } from './auth/Shared.js';
  * avoid email enumeration.
  */
 export function SigninPage() {
+  const { networkEnabled } = usePublicBrand();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -87,7 +89,13 @@ export function SigninPage() {
           {busy ? 'Sending…' : 'Email me a sign-in link'}
         </button>
         <div style={{ marginTop: 12, fontSize: 12, color: theme.textDim, textAlign: 'center' }}>
-          New here? <Link to="/signup" style={{ color: theme.accent }}>Sign up as a brand</Link> · <Link to="/creator/signup" style={{ color: theme.accent }}>Sign up as a creator</Link>
+          {/* Phoenixtekk fork: the creator signup is a Network surface. With no
+              coordinator configured it leads nowhere, so it is hidden along
+              with the rest of the Network UI. See docs/FORK-PATCHES.md #3. */}
+          New here? <Link to="/signup" style={{ color: theme.accent }}>Sign up as a brand</Link>
+          {networkEnabled && (
+            <> · <Link to="/creator/signup" style={{ color: theme.accent }}>Sign up as a creator</Link></>
+          )}
         </div>
       </form>
     </AuthFrame>
