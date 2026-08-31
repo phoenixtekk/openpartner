@@ -88,6 +88,7 @@ export function LandingPage() {
         </div>
         <div style={{ display: 'flex', gap: 18, alignItems: 'center', fontSize: 13 }}>
           <Link to="/pricing" style={{ color: theme.textMuted }}>Pricing</Link>
+          <Link to="/help" style={{ color: theme.textMuted }}>Help</Link>
           <Link to="/signin" style={{ color: theme.textMuted }}>Sign in</Link>
         </div>
       </header>
@@ -140,7 +141,7 @@ Track every sale back to the partner who drove it, set flat, percentage, or recu
       </main>
 
       <footer style={{ padding: '20px 32px', borderTop: `1px solid ${theme.borderSubtle}`, color: theme.textDim, fontSize: 12, textAlign: 'center' }}>
-Phoenixtekk Affiliates · <Link to="/pricing" style={{ color: theme.textMuted }}>Pricing</Link>
+Phoenixtekk Affiliates · <Link to="/pricing" style={{ color: theme.textMuted }}>Pricing</Link> · <Link to="/help" style={{ color: theme.textMuted }}>Help center</Link> · <Link to="/handbook" style={{ color: theme.textMuted }}>Operator handbook</Link>
       </footer>
     </div>
   );

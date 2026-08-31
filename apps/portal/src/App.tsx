@@ -69,6 +69,8 @@ import { InstallPage } from './pages/Install.js';
 import { LandingPage } from './pages/Landing.js';
 import { SignupPage } from './pages/Signup.js';
 import { PricingPage } from './pages/Pricing.js';
+import { HandbookPage } from './pages/docs/Handbook.js';
+import { HelpCenterPage } from './pages/docs/HelpCenter.js';
 import { SigninPage } from './pages/Signin.js';
 import { WorkspacesPage } from './pages/Workspaces.js';
 import { AddBrandPage } from './pages/AddBrand.js';
@@ -156,6 +158,12 @@ export function App() {
                 "Pricing" to openpartner.dev, which prices OpenPartner's
                 hosted service, not ours. See docs/FORK-PATCHES.md #4. */}
             <Route path="/pricing" element={<PricingPage />} />
+            {/* Phoenixtekk fork: hosted documentation. Public and
+                unauthenticated — a partner deciding whether to join, or a
+                prospective customer, reads these before they have an account.
+                See docs/FORK-PATCHES.md #6. */}
+            <Route path="/help" element={<HelpCenterPage />} />
+            <Route path="/handbook" element={<HandbookPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/signin" element={<SigninPage />} />
             <Route path="/workspaces" element={<WorkspacesPage />} />

@@ -121,6 +121,9 @@ export function PricingPage() {
           <Link to="/" style={{ color: theme.textMuted }}>
             Home
           </Link>
+          <Link to="/help" style={{ color: theme.textMuted }}>
+            Help
+          </Link>
           <Link to="/signin" style={{ color: theme.textMuted }}>
             Sign in
           </Link>
