@@ -12,7 +12,11 @@ import { AuditPage } from './Audit.js';
 
 const TABS = [
   { to: '/platform/brands', label: 'Brands' },
-  { to: '/platform/creators', label: 'Creators' },
+  // `network: true` marks a tab that only works when a Network coordinator
+  // is configured (NETWORK_URL on the API). Phoenixtekk does not run one, so
+  // this is filtered out rather than shipped as a tab that 503s.
+  // See docs/FORK-PATCHES.md #3.
+  { to: '/platform/creators', label: 'Creators', network: true },
   { to: '/platform/blocklist', label: 'Blocklist' },
   { to: '/platform/audit', label: 'Audit' },
 ] as const;
@@ -66,7 +70,18 @@ export function PlatformConsole() {
       <Routes>
         <Route index element={<Navigate to="/platform/brands" replace />} />
         <Route path="brands" element={<BrandsPage operator={operator} />} />
-        <Route path="creators" element={<CreatorsPage operator={operator} />} />
+        {/* Direct navigation to /platform/creators must not reach a page that
+            can only 503 — bounce it when no Network is configured. */}
+        <Route
+          path="creators"
+          element={
+            operator.networkEnabled ? (
+              <CreatorsPage operator={operator} />
+            ) : (
+              <Navigate to="/platform/brands" replace />
+            )
+          }
+        />
         <Route path="blocklist" element={<BlocklistPage operator={operator} />} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="*" element={<Navigate to="/platform/brands" replace />} />
@@ -107,7 +122,7 @@ function TopNav({ operator, onSignOut }: { operator: PlatformOperator; onSignOut
         </div>
 
         <nav style={{ display: 'flex', gap: 2, flex: 1, minWidth: 0 }}>
-          {TABS.map((t) => {
+          {TABS.filter((t) => !('network' in t && t.network) || operator.networkEnabled).map((t) => {
             const active = location.pathname === t.to || location.pathname.startsWith(`${t.to}/`);
             return (
               <Link

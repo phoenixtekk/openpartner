@@ -133,8 +133,14 @@ export interface PortalCustomDomainRow {
   updatedAt: Date;
 }
 
-export type BillingPlan = 'flex' | 'revshare' | 'enterprise';
-export const BILLING_PLANS: readonly BillingPlan[] = ['flex', 'revshare', 'enterprise'];
+/** Phoenixtekk fork: 'selfhost' added so a tenant's payout rail is decided by
+ *  its OWN row instead of the process-wide OPENPARTNER_MODE. Phoenixtekk's own
+ *  products carry 'selfhost' (direct Stripe transfers from the platform
+ *  balance); paying customers carry 'flex' / 'revshare' and use the funded
+ *  rail. Never accepted from the public signup endpoint.
+ *  See docs/FORK-PATCHES.md #1. */
+export type BillingPlan = 'flex' | 'revshare' | 'enterprise' | 'selfhost';
+export const BILLING_PLANS: readonly BillingPlan[] = ['flex', 'revshare', 'enterprise', 'selfhost'];
 
 export type PayoutRailPreference = 'auto' | 'stripe_connect' | 'manual';
 export const PAYOUT_RAIL_PREFERENCES: readonly PayoutRailPreference[] = [

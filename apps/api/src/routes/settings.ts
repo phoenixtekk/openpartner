@@ -42,6 +42,10 @@ import {
 } from '../network-client.js';
 import { createApiKeyRow } from '../auth.js';
 import { tenantOf } from '../tenancy.js';
+// Phoenixtekk fork: the Network is OpenPartner's own federated creator-
+// discovery service. We do not run one, so every Network surface is gated
+// on this rather than shipped as dead UI that 503s. See docs/FORK-PATCHES.md #3.
+import { platformNetworkUrl } from '../network-client.js';
 import { NETWORK_FEDERATION_SCOPES } from './api-keys.js';
 import { getTenantBillingState } from '../billing-plan.js';
 import { isWhiteLabelEntitled, getWhiteLabelState } from '../white-label.js';
@@ -119,7 +123,9 @@ async function readSettings(db: Knex, tenantId: string): Promise<ProgramSettings
 /** Any authenticated caller (admin OR partner) can read — not secret. */
 settingsRouter.get('/config/program', requireAuth, async (req, res) => {
   const { db, tenantId } = tenantOf(req);
-  res.json(await readSettings(db, tenantId));
+  const settings = await readSettings(db, tenantId);
+  // Phoenixtekk fork: tells the SPA whether any Network surface should render.
+  res.json({ ...settings, networkEnabled: platformNetworkUrl() !== null });
 });
 
 /**

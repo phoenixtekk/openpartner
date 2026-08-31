@@ -15,6 +15,7 @@ import {
   rowsToCsv,
 } from '../export.js';
 import { getMode } from '../stripe.js';
+import { getTenantBillingState } from '../billing-plan.js';
 import { tenantOf } from '../tenancy.js';
 
 export const exportRouter = Router();
@@ -133,8 +134,16 @@ exportRouter.post('/import', requireAuth, requireAdmin, async (req, res) => {
   const { db, tenantId } = tenantOf(req);
   // Safety rail: re-importing someone else's export into a shared hosted DB
   // would collide primary keys and leak cross-tenant data. Gate it to selfhost.
-  if (getMode() !== 'selfhost') {
-    return res.status(403).json({ error: 'import_disabled_on_hosted', detail: 'OPENPARTNER_MODE must be selfhost' });
+  //
+  // Phoenixtekk fork: resolved PER TENANT. The old global getMode() check meant
+  // that running the installation in selfhost mode opened import for EVERY
+  // tenant, customers included. See docs/FORK-PATCHES.md #1.
+  const importBilling = await getTenantBillingState(db, tenantId);
+  if (importBilling.mode !== 'selfhost') {
+    return res.status(403).json({
+      error: 'import_disabled_on_hosted',
+      detail: "import is only available to tenants on the 'selfhost' billing plan",
+    });
   }
   const body = importSchema.safeParse(req.body);
   if (!body.success) return res.status(400).json({ error: 'invalid_body', detail: body.error.flatten() });

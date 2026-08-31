@@ -14,6 +14,11 @@ export interface ProgramSettings {
   brandColor: string | null;
   programTermsUrl: string | null;
   whiteLabel: boolean;
+  /** Phoenixtekk fork: false when NETWORK_URL is unset on the API, i.e. no
+   *  federated Network coordinator exists. Every Network / Discover /
+   *  Creators surface must be hidden when false — otherwise those pages
+   *  render a 503 `network_not_configured`. See docs/FORK-PATCHES.md #3. */
+  networkEnabled: boolean;
 }
 
 /** Platform fallback applied whenever the tenant hasn't set a brand name. */
@@ -31,6 +36,9 @@ export interface Brand {
    *  product name in partner-facing UI; brand name + logo come from
    *  programName / logoUrl. */
   whiteLabel: boolean;
+  /** Phoenixtekk fork: whether a Network coordinator is configured at all.
+   *  Gate Network UI on `networkEnabled && !whiteLabel`. */
+  networkEnabled: boolean;
   isLoading: boolean;
 }
 
@@ -59,6 +67,9 @@ export function useBrand(): Brand {
     logoUrl: data?.logoUrl ?? null,
     supportEmail: data?.supportEmail || null,
     whiteLabel: data?.whiteLabel ?? false,
+    // Default FALSE: if the flag hasn't loaded we hide Network UI rather
+    // than flash a tab that will 503.
+    networkEnabled: data?.networkEnabled ?? false,
     isLoading,
   };
 }

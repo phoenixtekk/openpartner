@@ -40,7 +40,6 @@ import { withTenantTransaction } from './tenancy.js';
 import { reportUsageToStripe } from './usage-billing.js';
 import { runPayouts } from './payouts.js';
 import { drainOutbox, reportNetworkPayoutsToNetwork, sendHeartbeat } from './network-client.js';
-import { getMode } from './stripe.js';
 import { sweepCampaignEndNotifications } from './campaign-end-notifications.js';
 import { autoApproveMatureCommissions } from './commission-auto-approve.js';
 import { reverifyPortalDomains, sweepWhiteLabelEntitlement } from './portal-domains.js';
@@ -80,7 +79,15 @@ const JOBS: ScheduledJob[] = [
     cronExpr: '15 3 * * *',
     description: 'Per tenant: aggregate attributed GMV and report to Stripe meters (daily 03:15 UTC)',
     handler: async () => {
-      if (getMode() === 'selfhost') return { skipped: 'selfhost' };
+      // Phoenixtekk fork: the global `getMode() === 'selfhost'` early-return
+      // was removed here. It disabled this job for the WHOLE installation,
+      // which on a hosted deployment means customer tenants are never
+      // billed / reconciled. Every function below already resolves billing
+      // state PER TENANT and no-ops for selfhost tenants, so running it is
+      // correct and safe. See docs/FORK-PATCHES.md #1.
+      // reportUsageToStripe() reads getTenantBillingState() and returns
+      // `usage reporting is not configured for mode=selfhost` without
+      // reporting, so selfhost tenants are skipped individually.
       return forEachActiveTenant((trx, tenantId) => reportUsageToStripe(trx, tenantId));
     },
   },
@@ -203,7 +210,14 @@ const JOBS: ScheduledJob[] = [
     description:
       'Poll Stripe for every tenant plan subscription and heal state a missed webhook left behind: clear ended subscriptions (revoking white-label + custom-domain routing), refresh the status mirror, and alert ops on newly scheduled cancellations (daily 04:25 UTC)',
     handler: async () => {
-      if (getMode() === 'selfhost') return { skipped: 'selfhost' };
+      // Phoenixtekk fork: the global `getMode() === 'selfhost'` early-return
+      // was removed here. It disabled this job for the WHOLE installation,
+      // which on a hosted deployment means customer tenants are never
+      // billed / reconciled. Every function below already resolves billing
+      // state PER TENANT and no-ops for selfhost tenants, so running it is
+      // correct and safe. See docs/FORK-PATCHES.md #1.
+      // Only touches tenants holding a Stripe subscription id; selfhost
+      // tenants have none, so they are skipped naturally.
       const { reconcileTenantSubscriptions } = await import('./billing-lifecycle.js');
       return reconcileTenantSubscriptions(db);
     },
@@ -214,9 +228,14 @@ const JOBS: ScheduledJob[] = [
     description:
       'Re-check the _openpartner ownership TXT for every verified white-label domain; demote + revoke on missing proof (daily 04:45 UTC)',
     handler: async () => {
-      // Selfhost has no hosted white-label edge to police — the operator
-      // owns their own domain and branding.
-      if (getMode() === 'selfhost') return { skipped: 'selfhost' };
+      // Phoenixtekk fork: the global `getMode() === 'selfhost'` early-return
+      // was removed here. It disabled this job for the WHOLE installation,
+      // which on a hosted deployment means customer tenants are never
+      // billed / reconciled. Every function below already resolves billing
+      // state PER TENANT and no-ops for selfhost tenants, so running it is
+      // correct and safe. See docs/FORK-PATCHES.md #1.
+      // Only iterates tenants that actually registered a white-label portal
+      // domain. A selfhost tenant with none is untouched.
       return reverifyPortalDomains(db);
     },
   },
@@ -226,7 +245,14 @@ const JOBS: ScheduledJob[] = [
     description:
       'Revoke custom-domain routing for tenants whose effective white-label entitlement lapsed — incl. trials that expired without subscribing (daily 04:55 UTC)',
     handler: async () => {
-      if (getMode() === 'selfhost') return { skipped: 'selfhost' };
+      // Phoenixtekk fork: the global `getMode() === 'selfhost'` early-return
+      // was removed here. It disabled this job for the WHOLE installation,
+      // which on a hosted deployment means customer tenants are never
+      // billed / reconciled. Every function below already resolves billing
+      // state PER TENANT and no-ops for selfhost tenants, so running it is
+      // correct and safe. See docs/FORK-PATCHES.md #1.
+      // hasActivePlan() returns true for mode='selfhost', so a selfhost
+      // tenant is always entitled and is never revoked by this sweep.
       return sweepWhiteLabelEntitlement(db);
     },
   },

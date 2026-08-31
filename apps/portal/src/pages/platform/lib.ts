@@ -11,6 +11,12 @@
 export interface PlatformOperator {
   email: string;
   role: 'admin' | 'support';
+  /** Phoenixtekk fork: false when the API has no NETWORK_URL configured.
+   *  The Creators tab is a client of OpenPartner's federated creator-
+   *  discovery Network; with no coordinator it only renders a 503
+   *  `network_not_configured`, so the tab is hidden.
+   *  See docs/FORK-PATCHES.md #3. */
+  networkEnabled?: boolean;
 }
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';

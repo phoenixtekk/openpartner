@@ -201,7 +201,11 @@ function Shell() {
   // White-label tenants are isolated from the shared Network — gate the
   // Network/Discover routes on this so direct navigation can't reach them
   // even though the nav links are also hidden.
-  const { whiteLabel } = useBrand();
+  // Phoenixtekk fork: networkEnabled is false when the API has no NETWORK_URL.
+  // Network surfaces are gated on BOTH flags — white-label tenants are isolated
+  // from the Network, and with no coordinator the pages only 503.
+  // See docs/FORK-PATCHES.md #3.
+  const { whiteLabel, networkEnabled } = useBrand();
   // Brand approval gate: /branding carries the tenant's approvalStatus.
   // usePublicBrand hits it through api() so it's tenant-scoped under the
   // /t/<slug>/ prefix (a prefix-less fetch would resolve to the platform
@@ -248,8 +252,9 @@ function Shell() {
           <Route path="connect" element={<ConnectPage principal={auth.principal} />} />
 
           {/* Network discovery — open to anyone signed in (vendor admin can
-              browse too). Hidden entirely for white-label tenants. */}
-          {!whiteLabel && (
+              browse too). Hidden entirely for white-label tenants, and when
+              no Network coordinator is configured. */}
+          {!whiteLabel && networkEnabled && (
             <>
               <Route path="network/discover" element={<DiscoverPage />} />
               <Route path="network/offerings/:id" element={<OfferingDetailPage principal={auth.principal} />} />
@@ -260,7 +265,7 @@ function Shell() {
           {/* Partner-only Network surfaces. */}
           {auth.principal.role === 'partner' && (
             <>
-              {!whiteLabel && (
+              {!whiteLabel && networkEnabled && (
                 <>
                   <Route path="network/affiliations" element={<MyAffiliationsPage />} />
                   <Route path="network/requests" element={<MyRequestsPage />} />
@@ -288,7 +293,7 @@ function Shell() {
               <Route path="admin/billing" element={<AdminBilling />} />
               <Route path="admin/white-label" element={<AdminWhiteLabel />} />
               {/* Brand-side Network management — isolated for white-label. */}
-              {!whiteLabel && (
+              {!whiteLabel && networkEnabled && (
                 <>
                   <Route path="admin/network" element={<AdminNetwork />} />
                   <Route path="admin/network/complete" element={<AdminNetworkComplete />} />
@@ -392,7 +397,7 @@ function MobileDrawer({ open, onClose, children }: { open: boolean; onClose: () 
 export function Sidebar({ principal, variant = 'sidebar' }: { principal: Principal; variant?: 'sidebar' | 'drawer' }) {
   const nav = useNavigate();
   const tenantBase = useTenantBase();
-  const { programName, supportEmail, logoUrl, whiteLabel } = useBrand();
+  const { programName, supportEmail, logoUrl, whiteLabel, networkEnabled } = useBrand();
   const isDrawer = variant === 'drawer';
 
   return (
@@ -436,7 +441,7 @@ export function Sidebar({ principal, variant = 'sidebar' }: { principal: Princip
           {principal.role === 'partner' && <NavItem to="/postbacks" icon={<Webhook size={16} />}>Postbacks</NavItem>}
         </div>
 
-        {principal.role === 'partner' && !whiteLabel && (
+        {principal.role === 'partner' && !whiteLabel && networkEnabled && (
           <NavSection title="Network" collapsible storageKey="partner-network">
             <NavItem to="/network/discover" icon={<Globe size={16} />}>Discover programs</NavItem>
             <NavItem to="/network/affiliations" icon={<Megaphone size={16} />}>My partnerships</NavItem>
@@ -461,7 +466,7 @@ export function Sidebar({ principal, variant = 'sidebar' }: { principal: Princip
           </NavSection>
         )}
 
-        {principal.role === 'admin' && !whiteLabel && <NetworkNav />}
+        {principal.role === 'admin' && !whiteLabel && networkEnabled && <NetworkNav />}
       </div>
 
       <button

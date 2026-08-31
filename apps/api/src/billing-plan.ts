@@ -75,6 +75,10 @@ export async function getTenantBillingState(db: Knex, tenantId: string): Promise
   const trialExpiredWithoutSubscription =
     plan !== null &&
     plan !== 'enterprise' &&
+    // Phoenixtekk fork: selfhost tenants have no billing relationship, so
+    // they can never be "trial expired". Belt-and-braces — they also never
+    // activate a trial, so hasUsedTrial is false. See docs/FORK-PATCHES.md #1.
+    plan !== 'selfhost' &&
     hasUsedTrial &&
     !stripeSubscriptionId;
   return {
@@ -98,6 +102,11 @@ export async function getTenantBillingState(db: Knex, tenantId: string): Promise
 export function planToMode(plan: BillingPlan | null): OpenPartnerMode {
   if (plan === 'flex' || plan === 'enterprise') return 'flat';
   if (plan === 'revshare') return 'revshare';
+  // Phoenixtekk fork: an explicit per-tenant selfhost rail. Without this the
+  // ONLY way to get mode='selfhost' was the process-wide OPENPARTNER_MODE
+  // fallback below, which forced the whole installation into one rail and
+  // disabled customer usage metering. See docs/FORK-PATCHES.md #1.
+  if (plan === 'selfhost') return 'selfhost';
   return getMode();
 }
 

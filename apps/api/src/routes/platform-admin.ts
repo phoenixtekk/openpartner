@@ -232,7 +232,11 @@ platformAdminRouter.post('/platform-admin/signout', async (req, res) => {
 
 platformAdminRouter.get('/platform-admin/me', requirePlatformAdmin, (req, res) => {
   const actor = req.platformAdminActor!;
-  res.json({ email: actor.email, role: actor.role });
+  // Phoenixtekk fork: networkEnabled gates the ops console's Creators tab.
+  // The Network is OpenPartner's own federated creator-discovery service; we
+  // do not run one, so that tab would only ever render a 503
+  // (network_not_configured). See docs/FORK-PATCHES.md #3.
+  res.json({ email: actor.email, role: actor.role, networkEnabled: platformNetworkUrl() !== null });
 });
 
 // --------------------------------------------------------------------------
