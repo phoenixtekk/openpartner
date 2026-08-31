@@ -4,6 +4,7 @@ import { Banknote, CreditCard, ExternalLink } from 'lucide-react';
 import { api, ApiError } from '../../api.js';
 import { theme } from '../../theme.js';
 import { Button, Card, ErrorBanner, Page } from '../../ui.js';
+import { PLATFORM_LEGAL_ENTITY, PLATFORM_FUNDING_TERMS_URL } from '../../lib/platform.js';
 
 type Plan = 'flex' | 'revshare' | 'enterprise';
 type Mode = 'selfhost' | 'flat' | 'revshare';
@@ -503,10 +504,10 @@ function FundingCard() {
               style={{ marginTop: 2 }}
             />
             <span>
-              I authorize OpenPartner to debit our bank account for approved partner commission
-              batches, per the{' '}
+              I authorize {PLATFORM_LEGAL_ENTITY} to debit our bank account for approved partner
+              commission batches, per the{' '}
               <a
-                href="https://openpartner.dev/terms"
+                href={PLATFORM_FUNDING_TERMS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: theme.accent }}

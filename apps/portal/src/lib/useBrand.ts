@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, currentTenantSlug } from '../api.js';
+import { PLATFORM_NAME } from './platform.js';
 
 /**
  * Shape of `GET /config/program`. Mirrors the API's `ProgramSettings`
@@ -22,7 +23,7 @@ export interface ProgramSettings {
 }
 
 /** Platform fallback applied whenever the tenant hasn't set a brand name. */
-export const DEFAULT_BRAND = 'OpenPartner';
+export const DEFAULT_BRAND = PLATFORM_NAME;
 
 export interface Brand {
   /** Brand name with the platform fallback applied — never empty. When

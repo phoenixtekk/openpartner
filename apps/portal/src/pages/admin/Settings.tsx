@@ -4,6 +4,7 @@ import { Settings as SettingsIcon, Mail, Wallet, Palette, Image as ImageIcon, Tr
 import { api, ApiError } from '../../api.js';
 import { theme } from '../../theme.js';
 import { Button, Card, ErrorBanner, Input, Label, Page, Select } from '../../ui.js';
+import { PLATFORM_NAME } from '../../lib/platform.js';
 
 type PayoutRail = 'auto' | 'stripe_connect' | 'manual';
 type PayoutCadence = 'weekly' | 'biweekly' | 'monthly' | 'manual';
@@ -217,7 +218,7 @@ function ProgramSection() {
         <Input value={programName} onChange={(e) => setProgramName(e.target.value)} placeholder="e.g. Acme" maxLength={120} />
         <Hint>
           Shown to partners in the portal.
-          {data?.whiteLabel ? ' Leave blank to fall back to your workspace name.' : ' Leave blank to fall back to "OpenPartner".'}
+          {data?.whiteLabel ? ' Leave blank to fall back to your workspace name.' : ` Leave blank to fall back to "${PLATFORM_NAME}".`}
         </Hint>
       </div>
       <div style={{ marginBottom: 16 }}>
@@ -257,7 +258,7 @@ function ProgramSection() {
               style={{ fontFamily: theme.fontMono }}
             />
           </div>
-          <Hint>Hex code. {data?.whiteLabel ? 'Blank uses the default green.' : "Blank = OpenPartner's default green."}</Hint>
+          <Hint>Hex code. {data?.whiteLabel ? 'Blank uses the default green.' : `Blank = ${PLATFORM_NAME}'s default green.`}</Hint>
         </div>
         <div>
           <Label>Program terms URL</Label>
@@ -847,7 +848,7 @@ function MailSection() {
           Email is set up by default
         </div>
         <div style={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.55 }}>
-          Partner invites, sign-in links, and notifications send through OpenPartner&rsquo;s
+          Partner invites, sign-in links, and notifications send through {PLATFORM_NAME}&rsquo;s
           email infrastructure as <code>&ldquo;Your brand via OpenPartner&rdquo; &lt;noreply@openpartner.dev&gt;</code>.
           Replies go to your support email if you&rsquo;ve set one. This section is optional —
           configure your own SMTP or Postmark only if you want emails to come from your

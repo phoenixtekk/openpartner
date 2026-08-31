@@ -4,6 +4,7 @@ import { Check, Copy, Globe, RefreshCw, Trash2 } from 'lucide-react';
 import { api, ApiError } from '../../api.js';
 import { theme } from '../../theme.js';
 import { Button, Card, ErrorBanner, Input, Label, Page, SectionHeading, StatusPill } from '../../ui.js';
+import { PLATFORM_NAME } from '../../lib/platform.js';
 
 /**
  * White-label wizard (spec Phase 3): enable the billing add-on, register a
@@ -182,7 +183,7 @@ function AddOnCard({ billing }: { billing: WhiteLabelBilling }) {
           </>
         ) : (
           <>
-            Removes OpenPartner branding from your partner portal and emails, hides the shared Network, and
+            Removes {PLATFORM_NAME} branding from your partner portal and emails, hides the shared Network, and
             serves everything from your own domain (e.g. <code>partners.yourbrand.com</code>). Billed monthly as
             an add-on to your plan subscription{billing.priceConfigured ? '' : ' — pricing not yet configured on this deployment; contact support'}.
             {needsCheckout && billing.priceConfigured && (

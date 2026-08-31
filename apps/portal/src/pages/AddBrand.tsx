@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { theme } from '../theme.js';
 import { Logo } from './auth/Shared.js';
+import { PLATFORM_NAME } from '../lib/platform.js';
 
 /**
  * Authenticated add-brand flow (§13). Reached from the identity switcher's
@@ -92,7 +93,7 @@ export function AddBrandPage() {
       <div style={{ maxWidth: 460, width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
           <Logo />
-          <div style={{ fontSize: 16, fontWeight: 600 }}>OpenPartner</div>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>{PLATFORM_NAME}</div>
         </div>
         <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 6px', letterSpacing: '-0.01em' }}>Create a new brand</h1>
         <p style={{ color: theme.textMuted, fontSize: 14, marginTop: 0, marginBottom: 20, lineHeight: 1.5 }}>

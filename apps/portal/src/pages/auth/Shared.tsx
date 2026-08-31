@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { theme } from '../../theme.js';
 import { usePublicBrand } from '../../lib/useBrand.js';
+import { PLATFORM_NAME } from '../../lib/platform.js';
 
 export function AuthFrame({
   title,
@@ -62,7 +63,7 @@ export function Logo({ size = 26 }: { size?: number } = {}) {
   return (
     <img
       src="/logo-mark-green.svg"
-      alt="OpenPartner"
+      alt={PLATFORM_NAME}
       width={size}
       height={size}
       style={{ display: 'block' }}

@@ -84,6 +84,7 @@ import { CreatorMagicLandingPage } from './pages/creator/CreatorMagicLanding.js'
 import { CreatorShell } from './pages/creator/CreatorShell.js';
 import { CreatorPublicProfilePage } from './pages/creator/CreatorPublicProfile.js';
 import { FraudReviewPage } from './pages/FraudReview.js';
+import { PLATFORM_NAME } from './lib/platform.js';
 
 interface AuthState {
   loading: boolean;
@@ -1307,7 +1308,7 @@ function NavItem({
   );
 }
 
-function Logo({ size = 26, alt = 'OpenPartner' }: { size?: number; alt?: string } = {}) {
+function Logo({ size = 26, alt = PLATFORM_NAME }: { size?: number; alt?: string } = {}) {
   return (
     <img
       src="/logo-mark-green.svg"
@@ -1396,7 +1397,7 @@ function PendingReviewBanner({ isMobile, onDismiss }: { isMobile: boolean; onDis
         <div style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.5, color: theme.text }}>
           <strong style={{ color: theme.warn }}>Your brand is under review.</strong>{' '}
           You can set up your program now, but partner links won&rsquo;t redirect and you can&rsquo;t invite
-          partners until an OpenPartner operator approves your account.
+          partners until a {PLATFORM_NAME} operator approves your account.
         </div>
         <button
           onClick={onDismiss}
