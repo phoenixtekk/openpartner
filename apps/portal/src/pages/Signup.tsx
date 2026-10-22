@@ -118,7 +118,10 @@ export function SignupPage() {
             style={inputStyle}
           />
         </Field>
-        <Field label="URL slug" hint="Lowercase letters, numbers, hyphens. Becomes app.openpartner.dev/t/<slug>/.">
+        <Field
+          label="URL slug"
+          hint={`Lowercase letters, numbers, hyphens. Becomes ${typeof window !== 'undefined' ? window.location.host : ''}/t/<slug>/.`}
+        >
           <input
             value={slug}
             onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}

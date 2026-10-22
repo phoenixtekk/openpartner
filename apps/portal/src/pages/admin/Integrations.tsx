@@ -411,7 +411,7 @@ function PayloadGuide() {
       <p style={{ fontSize: 12, color: theme.textMuted, margin: '12px 0 0' }}>
         See the{' '}
         <a
-          href="https://openpartner.dev/docs/integrations/crm"
+          href="/help"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: theme.accent, display: 'inline-flex', alignItems: 'center', gap: 3 }}

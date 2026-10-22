@@ -849,7 +849,7 @@ function MailSection() {
         </div>
         <div style={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.55 }}>
           Partner invites, sign-in links, and notifications send through {PLATFORM_NAME}&rsquo;s
-          email infrastructure as <code>&ldquo;Your brand via OpenPartner&rdquo; &lt;noreply@openpartner.dev&gt;</code>.
+          email infrastructure as <code>&ldquo;Your brand via {PLATFORM_NAME}&rdquo;</code>.
           Replies go to your support email if you&rsquo;ve set one. This section is optional —
           configure your own SMTP or Postmark only if you want emails to come from your
           own domain.
