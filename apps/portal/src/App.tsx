@@ -174,13 +174,19 @@ export function App() {
             <Route path="/platform/login" element={<PlatformLoginPage />} />
             <Route path="/platform/auth" element={<PlatformAuthPage />} />
             <Route path="/platform/*" element={<PlatformConsole />} />
-            {/* Platform-level Creator surfaces — separate auth from vendor admins. */}
-            <Route path="/creator/signup" element={<CreatorSignupPage />} />
-            <Route path="/creator/login" element={<CreatorSigninPage />} />
-            <Route path="/creator/auth/magic" element={<CreatorMagicLandingPage />} />
-            <Route path="/creator/*" element={<CreatorShell />} />
+            {/* Platform-level Creator surfaces — separate auth from vendor admins.
+                Phoenixtekk fork: every one of these is a client of the federated
+                Network coordinator. We run none, so without NETWORK_URL they can
+                only render network_not_configured. Hiding the LINKS was not
+                enough — a direct URL still landed on a dead page, which is what
+                the owner hit. Gate the ROUTES too.
+                See docs/FORK-PATCHES.md #3. */}
+            <Route path="/creator/signup" element={<NetworkOnly><CreatorSignupPage /></NetworkOnly>} />
+            <Route path="/creator/login" element={<NetworkOnly><CreatorSigninPage /></NetworkOnly>} />
+            <Route path="/creator/auth/magic" element={<NetworkOnly><CreatorMagicLandingPage /></NetworkOnly>} />
+            <Route path="/creator/*" element={<NetworkOnly><CreatorShell /></NetworkOnly>} />
             {/* Public creator profiles — no auth, browsable from anywhere. */}
-            <Route path="/creators/:handle" element={<CreatorPublicProfilePage />} />
+            <Route path="/creators/:handle" element={<NetworkOnly><CreatorPublicProfilePage /></NetworkOnly>} />
             <Route path="/t/:slug/login" element={<LoginPage />} />
             <Route path="/t/:slug/join" element={<PartnerJoinPage />} />
             <Route path="/t/:slug/auth/magic" element={<MagicLandingPage />} />
@@ -205,6 +211,22 @@ export function App() {
       </Routes>
     </BrowserRouter>
   );
+}
+
+/**
+ * Phoenixtekk fork: renders children only when a Network coordinator is
+ * configured; otherwise sends the visitor somewhere real.
+ *
+ * Creator surfaces are clients of OpenPartner's federated creator-discovery
+ * Network. With NETWORK_URL unset every one of them 503s. Nothing renders
+ * while the flag is still loading, so a dead page never flashes first.
+ * See docs/FORK-PATCHES.md #3.
+ */
+function NetworkOnly({ children }: { children: ReactNode }) {
+  const { networkEnabled, isLoading } = usePublicBrand();
+  if (isLoading) return null;
+  if (!networkEnabled) return <Navigate to="/signup" replace />;
+  return <>{children}</>;
 }
 
 function Shell() {

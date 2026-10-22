@@ -133,13 +133,21 @@ function AuthBrandMark({
  */
 export function SignupTabs({ active }: { active: 'brand' | 'creator' }) {
   const location = useLocation();
+  // Phoenixtekk fork: the creator side is a Network surface. With no
+  // coordinator configured it can only render network_not_configured, so the
+  // tab is removed — and with one option left the strip is meaningless, so it
+  // renders nothing at all. See docs/FORK-PATCHES.md #3.
+  const { networkEnabled } = usePublicBrand();
   // Preserve search params (?plan=flex etc.) so a brand-side query
   // stays meaningful if the user toggles to creator and back.
   const qs = location.search;
   const tabs = [
     { key: 'brand' as const, label: 'Brand', href: `/signup${qs}` },
-    { key: 'creator' as const, label: 'Creator', href: `/creator/signup${qs}` },
+    ...(networkEnabled
+      ? [{ key: 'creator' as const, label: 'Creator', href: `/creator/signup${qs}` }]
+      : []),
   ];
+  if (tabs.length < 2) return null;
   return (
     <div
       style={{
