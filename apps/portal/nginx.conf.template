@@ -31,7 +31,24 @@ server {
     # stripped so the API continues to see /attribution/events etc.
     location /api/ {
         rewrite ^/api/(.*)$ /$1 break;
-        proxy_pass http://${API_UPSTREAM};
+
+        # Phoenixtekk fork: resolve the upstream at REQUEST time, not at worker
+        # start. nginx resolves a literal proxy_pass host once and caches the
+        # address for the life of the worker, so recreating the api container
+        # (every `docker compose up -d` that rebuilds it) gives it a new IP
+        # while nginx keeps dialling the dead one — the whole public /api path
+        # 502s, taking the SPA and the Stripe webhook with it, until someone
+        # restarts this container. Observed in production 2026-10-27: webhooks
+        # for a completed Checkout were lost this way.
+        #
+        # 127.0.0.11 is Docker's embedded DNS. Putting the host in a variable
+        # is what forces nginx to re-resolve per request; the explicit
+        # $uri$is_args$args is required because a proxy_pass with a variable
+        # does not inherit the rewritten URI on its own.
+        # See docs/FORK-PATCHES.md #9.
+        resolver 127.0.0.11 valid=10s ipv6=off;
+        set $api_upstream ${API_UPSTREAM};
+        proxy_pass http://$api_upstream$uri$is_args$args;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
