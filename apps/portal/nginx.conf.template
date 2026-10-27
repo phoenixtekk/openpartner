@@ -30,8 +30,6 @@ server {
     # Proxy /api/* to the API service. The API's own /api prefix is
     # stripped so the API continues to see /attribution/events etc.
     location /api/ {
-        rewrite ^/api/(.*)$ /$1 break;
-
         # Phoenixtekk fork: resolve the upstream at REQUEST time, not at worker
         # start. nginx resolves a literal proxy_pass host once and caches the
         # address for the life of the worker, so recreating the api container
@@ -46,8 +44,14 @@ server {
         # $uri$is_args$args is required because a proxy_pass with a variable
         # does not inherit the rewritten URI on its own.
         # See docs/FORK-PATCHES.md #9.
+        #
+        # ORDER MATTERS: `set` is a rewrite-module directive, and
+        # `rewrite ... break` halts that module for the rest of the location.
+        # With the set after the rewrite nginx logs "using uninitialized
+        # api_upstream variable" and 500s. Set first, rewrite second.
         resolver 127.0.0.11 valid=10s ipv6=off;
         set $api_upstream ${API_UPSTREAM};
+        rewrite ^/api/(.*)$ /$1 break;
         proxy_pass http://$api_upstream$uri$is_args$args;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
