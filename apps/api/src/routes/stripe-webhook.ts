@@ -123,6 +123,38 @@ const PLATFORM_EVENT_TYPES = new Set([
 // Only account.updated is a genuine connected-account event (event.account
 // set, delivered via the Connect destination).
 const CONNECT_EVENT_TYPES = new Set(['account.updated']);
+
+/**
+ * Phoenixtekk fork: event types whose tenant is resolved by walking
+ * Identity -> Click, and which therefore become resolvable only AFTER
+ * checkout.session.completed has stitched the customer.
+ *
+ * Stripe does not order webhook deliveries. Measured on a real Checkout
+ * subscription (2026-10-27): invoice.paid fired at 03:35:41 and
+ * checkout.session.completed at 03:35:42, with the Identity row written at
+ * 03:35:43 — so invoice.paid arrived two seconds before the row it needs.
+ * Upstream answered 2xx on the unresolved tenant, which tells Stripe never to
+ * retry, and the FIRST invoice of every Checkout-initiated subscription was
+ * silently discarded. On a `trigger: first` commission rule the partner earned
+ * nothing at all.
+ *
+ * For these types an unresolved tenant is usually TRANSIENT, so we ask Stripe
+ * to redeliver instead of acknowledging. See docs/FORK-PATCHES.md #7.
+ */
+const IDENTITY_RESOLVED_EVENT_TYPES = new Set([
+  'invoice.paid',
+  'invoice.payment_failed',
+  'charge.refunded',
+  'charge.dispute.created',
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+]);
+
+/** How long an unresolved identity-resolved event is treated as transient.
+ *  Past this the stitch is not coming and we stop asking Stripe to retry, so
+ *  a genuinely foreign event cannot retry for Stripe's full 3-day window. */
+const UNRESOLVED_RETRY_WINDOW_MS = 60 * 60 * 1000;
 function expectedFamilyForType(type: string): SecretFamily | null {
   if (PLATFORM_EVENT_TYPES.has(type)) return 'platform';
   if (CONNECT_EVENT_TYPES.has(type)) return 'connect';
@@ -203,8 +235,36 @@ stripeWebhookRouter.post(
 
     const tenantId = await resolveTenantForEvent(event, family);
     if (!tenantId) {
-      // Genuinely unresolvable — most likely a connected-account event for
-      // an account we don't recognize. 2xx so Stripe stops retrying.
+      // Phoenixtekk fork: "unresolved" is two different situations and they
+      // need opposite answers.
+      //
+      // For an identity-resolved revenue event that is still young, the
+      // stitch is probably seconds away (Stripe delivers invoice.paid before
+      // checkout.session.completed) — acknowledging would discard real money,
+      // so ask for a redelivery. Stripe backs off and retries for ~3 days;
+      // the Identity appears within seconds of the first attempt.
+      //
+      // Anything else — a connected-account event for an account we do not
+      // know, or an identity-resolved event old enough that no stitch is
+      // coming — is genuinely unresolvable. 2xx so Stripe stops retrying.
+      const ageMs = Date.now() - event.created * 1000;
+      const mayStillStitch =
+        IDENTITY_RESOLVED_EVENT_TYPES.has(event.type) && ageMs < UNRESOLVED_RETRY_WINDOW_MS;
+      if (mayStillStitch) {
+        console.warn(
+          `[stripe-webhook] tenant unresolved for ${event.type} ${event.id} after ${Math.round(ageMs / 1000)}s — asking Stripe to redeliver (identity not stitched yet)`,
+        );
+        return res
+          .status(409)
+          .json({ error: 'tenant_not_yet_resolvable', eventId: event.id, retry: true });
+      }
+      if (IDENTITY_RESOLVED_EVENT_TYPES.has(event.type)) {
+        // Past the window on a revenue event: this one really is lost, and
+        // that is worth shouting about rather than filing as routine.
+        console.error(
+          `[stripe-webhook] ALERT dropping unresolved revenue event ${event.type} ${event.id} after ${Math.round(ageMs / 1000)}s — no identity was ever stitched; any commission on it is lost`,
+        );
+      }
       return res.json({ ok: true, skipped: event.type, reason: 'unresolved_tenant' });
     }
 
@@ -878,6 +938,10 @@ async function mapStripeEvent(
       // for refund lookups. Read it tolerantly.
       const rawCharge = (invoice as unknown as { charge?: string | { id: string } | null }).charge;
       const chargeId = typeof rawCharge === 'string' ? rawCharge : rawCharge?.id ?? null;
+      // Phoenixtekk fork: `Invoice.charge` is gone on current API versions, so
+      // stamp the PaymentIntent too — it is what charge.refunded can actually
+      // match on. See paymentIntentForInvoice().
+      const paymentIntentId = await paymentIntentForInvoice(stripe, invoice);
       return {
         userId,
         type: 'invoice_paid',
@@ -888,6 +952,7 @@ async function mapStripeEvent(
         metadata: {
           stripeInvoiceId: invoice.id,
           ...(chargeId ? { stripeChargeId: chargeId } : {}),
+          ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
         },
       };
     }
@@ -896,7 +961,26 @@ async function mapStripeEvent(
       const userId = await resolveUserIdFromCustomer(trx, stripe, charge.customer);
       if (!userId) return null;
       const rawInvoice = (charge as unknown as { invoice?: string | { id: string } | null }).invoice;
-      const invoiceId = typeof rawInvoice === 'string' ? rawInvoice : rawInvoice?.id ?? null;
+      let invoiceId = typeof rawInvoice === 'string' ? rawInvoice : rawInvoice?.id ?? null;
+      // Phoenixtekk fork: `Charge.invoice` is gone on current API versions, so
+      // fall back to the PaymentIntent, which invoice.paid stamped onto the
+      // original Event. Without this the reversal below never fires and a full
+      // refund leaves the commission accrued. See docs/FORK-PATCHES.md #8.
+      if (!invoiceId) {
+        const rawPi = (charge as unknown as { payment_intent?: string | { id: string } | null })
+          .payment_intent;
+        const piId = typeof rawPi === 'string' ? rawPi : rawPi?.id ?? null;
+        if (piId) {
+          const source = await trx<EventRow>(TABLES.Event)
+            .whereRaw(`metadata->>'stripePaymentIntentId' = ?`, [piId])
+            .andWhere({ type: 'invoice_paid' })
+            .orderBy('ts', 'desc')
+            .first();
+          const stamped = (source?.metadata as { stripeInvoiceId?: string } | undefined)
+            ?.stripeInvoiceId;
+          if (stamped) invoiceId = stamped;
+        }
+      }
 
       // Stopgap for partial-refund over-clawback: the old path reversed 100%
       // of an invoice's commissions on ANY refund, and charge.amount_refunded
@@ -997,6 +1081,48 @@ async function mapStripeEvent(
  * paid (the partner has the money) and the count is returned so the
  * refund Event can record that admin attention is needed.
  */
+/**
+ * Phoenixtekk fork: the PaymentIntent that paid an invoice.
+ *
+ * Recent Stripe API versions removed BOTH sides of the old charge<->invoice
+ * link: `Invoice.charge` and `Charge.invoice` are gone, and `PaymentIntent.invoice`
+ * reads null. Verified against live test-mode objects 2026-10-27. The only
+ * surviving join is `Invoice.payments[].payment.payment_intent`, which has to
+ * be expanded, matched against `Charge.payment_intent` on the refund side.
+ *
+ * Without this the refund handler could never find the invoice, so
+ * `reverseCommissionsForInvoice` never ran and a FULL refund left the
+ * commission accrued — i.e. affiliates were paid on refunded sales.
+ * See docs/FORK-PATCHES.md #8.
+ */
+async function paymentIntentForInvoice(
+  stripe: Stripe,
+  invoice: Stripe.Invoice,
+): Promise<string | null> {
+  const read = (inv: Stripe.Invoice): string | null => {
+    const payments = (inv as unknown as {
+      payments?: { data?: Array<{ payment?: { payment_intent?: string | { id: string } | null } }> };
+    }).payments;
+    for (const entry of payments?.data ?? []) {
+      const pi = entry.payment?.payment_intent;
+      const id = typeof pi === 'string' ? pi : pi?.id ?? null;
+      if (id) return id;
+    }
+    return null;
+  };
+  // The webhook payload does not expand `payments`, so re-read when needed.
+  const fromPayload = read(invoice);
+  if (fromPayload) return fromPayload;
+  if (!invoice.id) return null;
+  try {
+    const full = await stripe.invoices.retrieve(invoice.id, { expand: ['payments'] });
+    return read(full);
+  } catch {
+    // Non-fatal: we simply lose the refund linkage for this invoice.
+    return null;
+  }
+}
+
 async function reverseCommissionsForInvoice(
   trx: Knex.Transaction,
   invoiceId: string,
