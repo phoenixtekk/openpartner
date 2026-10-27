@@ -6,6 +6,7 @@
  */
 
 import { getPortalBaseUrl, type PortalLinkTenant } from './portal-url.js';
+import { PLATFORM_NAME } from './platform-name.js';
 
 /**
  * The ONE place magic-link URLs are built (spec §4.4). Tenant-aware: a
@@ -184,7 +185,7 @@ export function brandApprovedEmail(
   const text = [
     `Hi ${adminName},`,
     ``,
-    `Good news — ${brandName} has been approved on OpenPartner. Your`,
+    `Good news — ${brandName} has been approved on ${PLATFORM_NAME}. Your`,
     `partner links now redirect, and you can invite partners and go live.`,
     ``,
     `Jump back into your dashboard:`,
@@ -202,7 +203,7 @@ export function brandRejectedEmail(brandName: string, reason: string | null): Em
   const text = [
     `Hello,`,
     ``,
-    `After review, we're unable to approve ${brandName} for OpenPartner at`,
+    `After review, we're unable to approve ${brandName} for ${PLATFORM_NAME} at`,
     `this time.`,
     ...(reason ? [``, `Reason: ${reason}`] : []),
     ``,
@@ -215,9 +216,9 @@ export function brandRejectedEmail(brandName: string, reason: string | null): Em
 
 /** Platform operator: magic-link sign-in to the ops console. */
 export function platformAdminSigninEmail(link: string): EmailTemplate {
-  const subject = `Your OpenPartner ops sign-in link`;
+  const subject = `Your ${PLATFORM_NAME} ops sign-in link`;
   const text = [
-    `Click the link below to sign in to the OpenPartner platform-ops console:`,
+    `Click the link below to sign in to the ${PLATFORM_NAME} platform-ops console:`,
     ``,
     link,
     ``,
@@ -276,7 +277,7 @@ export function opsTenantCancellationScheduledEmail(
 ): EmailTemplate {
   const subject = `[Billing] ${brandName} (${slug}) scheduled a cancellation`;
   const text = [
-    `${brandName} (${slug}) scheduled their OpenPartner subscription to cancel${
+    `${brandName} (${slug}) scheduled their ${PLATFORM_NAME} subscription to cancel${
       effectiveAt ? ` on ${effectiveAt.toISOString().slice(0, 10)}` : ' at the end of the current period'
     }.`,
     ...(customerFeedback ? [``, `Customer feedback: ${customerFeedback}`] : []),
@@ -305,7 +306,7 @@ export function opsTenantSubscriptionEndedEmail(
 ): EmailTemplate {
   const subject = `[Billing] ${brandName} (${slug}) subscription ended`;
   const text = [
-    `The OpenPartner plan subscription for ${brandName} (${slug}) has ended${
+    `The ${PLATFORM_NAME} plan subscription for ${brandName} (${slug}) has ended${
       via === 'reconciliation'
         ? ` — caught by the nightly Stripe reconciliation, which means the Stripe webhook delivery was missed (check the endpoint's subscribed events)`
         : ''
