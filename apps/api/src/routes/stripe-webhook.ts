@@ -268,7 +268,47 @@ stripeWebhookRouter.post(
       return res.json({ ok: true, skipped: event.type, reason: 'unresolved_tenant' });
     }
 
-    const result = await runInTenant(tenantId, async (trx) => {
+    const result = await runInTenant(tenantId, (trx) => processEventInTenant(trx, event!, tenantId));
+
+    // Phoenixtekk fork: a checkout.session.completed has just stitched the
+    // Identity, so any revenue event we previously 409'd for this customer is
+    // resolvable NOW. Replaying here means first-invoice attribution lands in
+    // seconds instead of waiting on Stripe's redelivery backoff (measured at
+    // ~37 minutes in production). Best-effort and outside the transaction
+    // above: a failure here costs latency, never correctness, because Stripe
+    // will still redeliver. See docs/FORK-PATCHES.md #10.
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const customerId =
+        typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null;
+      if (customerId) {
+        try {
+          const replayed = await replayPendingEventsForCustomer(tenantId, customerId);
+          if (replayed.length > 0) {
+            console.log('[stripe-webhook] replayed after stitch', { customerId, replayed });
+          }
+        } catch (err) {
+          console.warn('[stripe-webhook] replay-after-stitch failed (Stripe will redeliver)', err);
+        }
+      }
+    }
+
+    res.json({ ok: true, ...result });
+  },
+);
+
+/**
+ * Phoenixtekk fork: the per-event work, lifted out of the route handler so the
+ * replay path below runs through exactly the same code — mapping, the
+ * externalEventId idempotency guard, corrective handling and attribution.
+ * Sharing it is the point: a second implementation would drift.
+ */
+async function processEventInTenant(
+  trx: Knex.Transaction,
+  event: Stripe.Event,
+  tenantId: string,
+): Promise<Record<string, unknown>> {
+  {
       const connectResult = await handleConnectEvent(trx, event!, tenantId);
       if (connectResult) return { connect: connectResult };
 
@@ -322,11 +362,64 @@ stripeWebhookRouter.post(
 
       const attribution = await attributeEvent(trx, inserted[0] as EventRow);
       return { eventId, attribution };
-    });
+  }
+}
 
-    res.json({ ok: true, ...result });
-  },
-);
+/**
+ * Phoenixtekk fork: re-process revenue events we refused before the customer
+ * was stitched.
+ *
+ * Stripe does not order deliveries, so invoice.paid routinely arrives before
+ * the checkout.session.completed that creates the Identity. We answer those
+ * with a 409 so they are never lost (see IDENTITY_RESOLVED_EVENT_TYPES), but
+ * Stripe's backoff is slow — measured at ~37 minutes in production, during
+ * which the partner's first commission simply does not exist.
+ *
+ * The moment we stitch, those events ARE resolvable, so we pull them straight
+ * from Stripe and run them through the normal path. Idempotency is free: the
+ * insert is ON CONFLICT on externalEventId, so if Stripe's redelivery beats us
+ * (or arrives afterwards) exactly one Event row survives either way.
+ *
+ * Deliberately narrow: only identity-resolved revenue types, only the last
+ * hour, only this customer's events.
+ */
+async function replayPendingEventsForCustomer(
+  tenantId: string,
+  customerId: string,
+): Promise<string[]> {
+  if (!stripe) return [];
+  const since = Math.floor(Date.now() / 1000) - 60 * 60;
+  const replayed: string[] = [];
+
+  const page = await stripe.events.list({
+    types: [...IDENTITY_RESOLVED_EVENT_TYPES],
+    created: { gte: since },
+    limit: 100,
+  });
+
+  for (const candidate of page.data) {
+    // Only this customer's events. extractCustomerId handles the payload
+    // shapes (string id, embedded object, deleted marker, customer.* itself).
+    const obj = candidate.data.object as { customer?: unknown; id?: string; object?: string };
+    if (extractCustomerId(obj) !== customerId) continue;
+
+    // Skip anything already recorded — the cheap check before a transaction.
+    const already = await db<EventRow>(TABLES.Event)
+      .where({ externalEventId: candidate.id })
+      .first('id');
+    if (already) continue;
+
+    try {
+      await runInTenant(tenantId, (trx) => processEventInTenant(trx, candidate, tenantId));
+      replayed.push(`${candidate.type}:${candidate.id}`);
+    } catch (err) {
+      // One bad event must not stop the rest; Stripe's redelivery is the
+      // backstop for whatever fails here.
+      console.warn(`[stripe-webhook] replay of ${candidate.id} failed`, err);
+    }
+  }
+  return replayed;
+}
 
 const CORRECTIVE_EVENT_TYPES = new Set(['refund', 'dispute_created', 'invoice_payment_failed']);
 
